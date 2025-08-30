@@ -30,6 +30,35 @@ jobs:
     - name: Install dependencies
       run: bun install
     
+    - name: Generate Windows Icon if missing
+      run: |
+        if (!(Test-Path "src-tauri/icons/icon.ico")) {
+          Write-Host "icon.ico is missing, generating from PNG..."
+          
+          # Check if we have a PNG to convert
+          if (Test-Path "src-tauri/icons/icon.png") {
+            Write-Host "Found icon.png, installing ImageMagick to convert..."
+            
+            # Install ImageMagick using chocolatey (pre-installed on GitHub runners)
+            choco install imagemagick -y
+            
+            # Convert PNG to ICO
+            & magick convert src-tauri/icons/icon.png -define icon:auto-resize=256,128,64,48,32,16 src-tauri/icons/icon.ico
+            Write-Host "Successfully created icon.ico"
+          }
+          else {
+            Write-Host "No icon.png found, creating a placeholder icon.ico"
+            # Create a minimal valid ICO file (1x1 pixel)
+            $bytes = [byte[]](0x00,0x00,0x01,0x00,0x01,0x00,0x01,0x01,0x00,0x00,0x01,0x00,0x18,0x00,0x30,0x00,0x00,0x00,0x16,0x00,0x00,0x00,0x28,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x01,0x00,0x18,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00)
+            [System.IO.File]::WriteAllBytes("src-tauri/icons/icon.ico", $bytes)
+            Write-Host "Created placeholder icon.ico"
+          }
+        }
+        else {
+          Write-Host "icon.ico already exists"
+        }
+      shell: pwsh
+    
     - name: Build Tauri App
       env:
         TAURI_SIGNING_PRIVATE_KEY: ""
